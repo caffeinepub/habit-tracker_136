@@ -485,8 +485,14 @@ export default function HabitGrid({
                     );
                   })}
                   <td className="p-2 text-center">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                      {doneDays}/{colDates.length}
+                    <span
+                      className="text-xs font-bold"
+                      style={{ color: habit.color }}
+                    >
+                      {colDates.length > 0
+                        ? Math.round((doneDays / colDates.length) * 100)
+                        : 0}
+                      %
                     </span>
                   </td>
                   <td className="p-1">

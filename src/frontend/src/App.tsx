@@ -10,20 +10,16 @@ import SharePage from "./pages/SharePage";
 function getShareToken(): string | null {
   const hash = window.location.hash;
   const pathname = window.location.pathname;
-
   const hashMatch = hash.match(/\/share\/([^/?#]+)/);
   if (hashMatch) return hashMatch[1];
-
   const pathMatch = pathname.match(/\/share\/([^/?#]+)/);
   if (pathMatch) return pathMatch[1];
-
   return null;
 }
 
 function AppContent() {
   const { identity, isInitializing } = useInternetIdentity();
   const isAuthenticated = !!identity;
-
   const [shareToken] = useState(() => getShareToken());
   const [timedOut, setTimedOut] = useState(false);
 
@@ -31,6 +27,8 @@ function AppContent() {
     data: userProfile,
     isLoading: profileLoading,
     isFetched: profileFetched,
+    isError: profileError,
+    refetch: retryProfile,
   } = useGetCallerUserProfile();
 
   const [currentToken, setCurrentToken] = useState(shareToken);
@@ -43,23 +41,17 @@ function AppContent() {
   const isStillLoading =
     isInitializing || (isAuthenticated && profileLoading && !profileFetched);
 
-  // Timeout fallback: if still loading after 10 seconds, show error
   useEffect(() => {
     if (!isStillLoading) {
       setTimedOut(false);
       return;
     }
-    const timer = setTimeout(() => {
-      setTimedOut(true);
-    }, 10000);
+    const timer = setTimeout(() => setTimedOut(true), 10000);
     return () => clearTimeout(timer);
   }, [isStillLoading]);
 
-  if (currentToken) {
-    return <SharePage token={currentToken} />;
-  }
+  if (currentToken) return <SharePage token={currentToken} />;
 
-  // Timed out — show friendly error
   if (timedOut && isStillLoading) {
     return (
       <div className="min-h-screen gradient-bg flex items-center justify-center">
@@ -91,9 +83,7 @@ function AppContent() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
+  if (!isAuthenticated) return <LoginPage />;
 
   if (profileLoading && !profileFetched) {
     return (
@@ -106,8 +96,35 @@ function AppContent() {
     );
   }
 
+  if (profileError && profileFetched) {
+    return (
+      <div className="min-h-screen gradient-bg flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-center px-6">
+          <div className="text-4xl">⚠️</div>
+          <p className="text-foreground font-medium">
+            Could not load your profile. Please try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => void retryProfile()}
+            className="px-6 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="text-sm text-muted-foreground underline"
+          >
+            Reload page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const showProfileSetup =
-    isAuthenticated && profileFetched && userProfile === null;
+    isAuthenticated && profileFetched && !profileError && userProfile == null;
 
   if (showProfileSetup) {
     return (
@@ -117,7 +134,18 @@ function AppContent() {
     );
   }
 
-  return <Dashboard userProfile={userProfile!} />;
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen gradient-bg flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-accent border-t-foreground animate-spin" />
+          <p className="text-muted-foreground text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <Dashboard userProfile={userProfile} />;
 }
 
 export default function App() {

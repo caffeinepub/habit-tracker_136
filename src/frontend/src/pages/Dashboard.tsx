@@ -136,64 +136,69 @@ export default function Dashboard({ userProfile }: DashboardProps) {
     }
   };
 
-  const progressSection = viewMode !== "day" && habits.length > 0 && (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2, duration: 0.4 }}
-      className="bg-white rounded-3xl card-shadow p-6"
-    >
-      <h3 className="font-bold text-base mb-6 text-foreground">
-        {viewMode === "week" ? "Weekly" : "Monthly"} Progress
-      </h3>
-      <div className="flex flex-wrap gap-8 justify-center">
-        {habits.map((habit) => {
-          const done = dates.filter((d) =>
-            logs.find(
-              (l) =>
-                l.habitId === habit.id && l.date === formatDateKey(d) && l.done,
-            ),
-          ).length;
-          const pct =
-            dates.length > 0 ? Math.round((done / dates.length) * 100) : 0;
-          return (
-            <DonutChart
-              key={habit.id}
-              percentage={pct}
-              color={habit.color}
-              size={90}
-              label={habit.name}
-            />
-          );
-        })}
-      </div>
-      <div className="mt-6 pt-4 border-t border-border/50">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
-            Overall completion
-          </span>
-          <span className="text-lg font-bold text-foreground">
-            {Math.round(
-              (habits.reduce((acc, h) => {
-                const done = dates.filter((d) =>
-                  logs.find(
-                    (l) =>
-                      l.habitId === h.id &&
-                      l.date === formatDateKey(d) &&
-                      l.done,
-                  ),
-                ).length;
-                return acc + done;
-              }, 0) /
-                Math.max(habits.length * dates.length, 1)) *
-                100,
-            )}
-            %
-          </span>
+  const progressSection = !isLoading &&
+    !isError &&
+    viewMode !== "day" &&
+    habits.length > 0 && (
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        className="bg-white rounded-3xl card-shadow p-6"
+      >
+        <h3 className="font-bold text-base mb-6 text-foreground">
+          {viewMode === "week" ? "Weekly" : "Monthly"} Progress
+        </h3>
+        <div className="flex flex-wrap gap-8 justify-center">
+          {habits.map((habit) => {
+            const done = dates.filter((d) =>
+              logs.find(
+                (l) =>
+                  l.habitId === habit.id &&
+                  l.date === formatDateKey(d) &&
+                  l.done,
+              ),
+            ).length;
+            const pct =
+              dates.length > 0 ? Math.round((done / dates.length) * 100) : 0;
+            return (
+              <DonutChart
+                key={habit.id}
+                percentage={pct}
+                color={habit.color}
+                size={90}
+                label={habit.name}
+              />
+            );
+          })}
         </div>
-      </div>
-    </motion.div>
-  );
+        <div className="mt-6 pt-4 border-t border-border/50">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">
+              Overall completion
+            </span>
+            <span className="text-lg font-bold text-foreground">
+              {Math.round(
+                (habits.reduce((acc, h) => {
+                  const done = dates.filter((d) =>
+                    logs.find(
+                      (l) =>
+                        l.habitId === h.id &&
+                        l.date === formatDateKey(d) &&
+                        l.done,
+                    ),
+                  ).length;
+                  return acc + done;
+                }, 0) /
+                  Math.max(habits.length * dates.length, 1)) *
+                  100,
+              )}
+              %
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    );
 
   const isDashboard = activeNav === "dashboard" || activeNav === "calendar";
 

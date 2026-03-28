@@ -50,24 +50,16 @@ actor {
   let shareTokens = Map.empty<Text, Principal>();
   let userProfiles = Map.empty<Principal, UserProfile>();
 
-  func getHabitsInternal(caller : Principal) : Map.Map<Text, Habit> {
-    switch (habitsByUser.get(caller)) {
-      case (null) { Runtime.trap("No habits found for user") };
-      case (?habits) { habits };
-    };
-  };
-
-  func getLogsInternal(caller : Principal) : Map.Map<Text, Map.Map<Text, HabitLog>> {
-    switch (logsByUser.get(caller)) {
-      case (null) { Runtime.trap("No logs found for user") };
-      case (?logs) { logs };
-    };
+  // Helper: check if caller has user permission (without trapping)
+  func isAuthorizedUser(caller : Principal) : Bool {
+    AccessControl.hasPermission(accessControlState, caller, #user)
   };
 
   // User Profile Management
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access profiles");
+    // Return null for unauthenticated/unregistered users instead of trapping
+    if (not isAuthorizedUser(caller)) {
+      return null;
     };
     userProfiles.get(caller);
   };
@@ -80,7 +72,7 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not isAuthorizedUser(caller)) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
     userProfiles.add(caller, profile);
@@ -88,7 +80,7 @@ actor {
 
   // Habit Management
   public shared ({ caller }) func addHabit(name : Text, color : Text) : async Habit {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not isAuthorizedUser(caller)) {
       Runtime.trap("Unauthorized: Only users can add habits");
     };
 
@@ -112,7 +104,7 @@ actor {
   };
 
   public shared ({ caller }) func removeHabit(habitId : Text) : async Bool {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not isAuthorizedUser(caller)) {
       Runtime.trap("Unauthorized: Only users can remove habits");
     };
 
@@ -146,8 +138,9 @@ actor {
   };
 
   public query ({ caller }) func getHabits() : async [Habit] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view habits");
+    // Return empty array for unregistered users instead of trapping
+    if (not isAuthorizedUser(caller)) {
+      return [];
     };
 
     switch (habitsByUser.get(caller)) {
@@ -173,7 +166,7 @@ actor {
 
   // Habit Logging
   public shared ({ caller }) func logHabit(habitId : Text, date : Text, done : Bool, timeNote : Text) : async HabitLog {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not isAuthorizedUser(caller)) {
       Runtime.trap("Unauthorized: Only users can log habits");
     };
 
@@ -213,8 +206,9 @@ actor {
   };
 
   public query ({ caller }) func getLogs(startDate : Text, endDate : Text) : async [HabitLog] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view logs");
+    // Return empty array for unregistered users instead of trapping
+    if (not isAuthorizedUser(caller)) {
+      return [];
     };
 
     switch (logsByUser.get(caller)) {
@@ -282,7 +276,7 @@ actor {
 
   // Share Token Management
   public shared ({ caller }) func generateShareToken() : async Text {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not isAuthorizedUser(caller)) {
       Runtime.trap("Unauthorized: Only users can generate share tokens");
     };
 
@@ -309,7 +303,6 @@ actor {
         let logs = switch (logsByUser.get(userPrincipal)) {
           case (null) { [] };
           case (?userLogs) {
-            // Collect all logs from all habits
             let allLogsArr = VarArray.repeat<[HabitLog]>([], userLogs.size());
             var allLogsCount = 0;
             var totalCount = 0;
@@ -346,9 +339,7 @@ actor {
 
   // Additional Query Functions
   public query ({ caller }) func getLogsForHabit(habitId : Text, startDate : Text, endDate : Text) : async [HabitLog] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view logs");
-    };
+    if (not isAuthorizedUser(caller)) { return [] };
 
     switch (logsByUser.get(caller)) {
       case (null) { [] };
@@ -364,9 +355,7 @@ actor {
   };
 
   public query ({ caller }) func getCallerLogs(habitId : Text, startDate : Text, endDate : Text) : async [HabitLog] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view logs");
-    };
+    if (not isAuthorizedUser(caller)) { return [] };
 
     switch (logsByUser.get(caller)) {
       case (null) { [] };
@@ -382,9 +371,7 @@ actor {
   };
 
   public query ({ caller }) func getHabitHistory(habitId : Text, startDate : Text, endDate : Text) : async [HabitLog] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view habit history");
-    };
+    if (not isAuthorizedUser(caller)) { return [] };
 
     switch (logsByUser.get(caller)) {
       case (null) { [] };
@@ -411,5 +398,4 @@ actor {
     );
     allHabits.sort().toArray();
   };
-
 };
