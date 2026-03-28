@@ -1,0 +1,93 @@
+@font-face {
+  font-family: "Figtree";
+  src: url("/assets/fonts/Figtree.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    --background: 0.99 0.005 240;
+    --foreground: 0.2 0.01 270;
+    --card: 1 0 0;
+    --card-foreground: 0.2 0.01 270;
+    --popover: 1 0 0;
+    --popover-foreground: 0.2 0.01 270;
+    --primary: 0.2 0.01 270;
+    --primary-foreground: 0.99 0 0;
+    --secondary: 0.97 0.015 280;
+    --secondary-foreground: 0.2 0.01 270;
+    --muted: 0.96 0.01 280;
+    --muted-foreground: 0.55 0.02 270;
+    --accent: 0.94 0.05 290;
+    --accent-foreground: 0.2 0.01 270;
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.99 0 0;
+    --border: 0.92 0.02 280;
+    --input: 0.95 0.02 280;
+    --ring: 0.65 0.12 290;
+    --sidebar: 1 0 0;
+    --sidebar-foreground: 0.2 0.01 270;
+    --sidebar-primary: 0.2 0.01 270;
+    --sidebar-primary-foreground: 0.99 0 0;
+    --sidebar-accent: 0.95 0.04 290;
+    --sidebar-accent-foreground: 0.2 0.01 270;
+    --sidebar-border: 0.93 0.02 280;
+    --sidebar-ring: 0.65 0.12 290;
+    --chart-1: 0.82 0.09 10;
+    --chart-2: 0.88 0.08 160;
+    --chart-3: 0.78 0.1 290;
+    --chart-4: 0.91 0.06 55;
+    --chart-5: 0.82 0.06 210;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Figtree", system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  html {
+    color-scheme: light;
+  }
+}
+
+@layer utilities {
+  .gradient-bg {
+    background: linear-gradient(
+      135deg,
+      oklch(0.96 0.055 160) 0%,
+      oklch(0.96 0.045 300) 35%,
+      oklch(0.97 0.04 60) 70%,
+      oklch(0.96 0.05 200) 100%
+    );
+    min-height: 100vh;
+  }
+
+  .card-shadow {
+    box-shadow: 0 4px 24px 0 rgba(140, 120, 200, 0.1), 0 1px 4px 0
+      rgba(0, 0, 0, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .sidebar-shadow {
+    box-shadow: 2px 0 20px 0 rgba(140, 120, 200, 0.12);
+  }
+
+  .habit-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .habit-card:hover {
+    transform: translateY(-1px);
+  }
+}
