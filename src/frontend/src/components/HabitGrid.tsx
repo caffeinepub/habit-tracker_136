@@ -35,6 +35,8 @@ export default function HabitGrid({
   const removeHabit = useRemoveHabit();
   const [timeNotes, setTimeNotes] = useState<Record<string, string>>({});
   const [pendingLog, setPendingLog] = useState<string | null>(null);
+  // which cell is expanded to show ✓/✗ options
+  const [expandedCell, setExpandedCell] = useState<string | null>(null);
 
   const getLog = (habitId: string, date: Date): HabitLog | undefined => {
     const key = formatDateKey(date);
@@ -46,6 +48,7 @@ export default function HabitGrid({
     if (pendingLog === key) return;
     const timeNote = timeNotes[key] || getLog(habit.id, date)?.timeNote || "";
     setPendingLog(key);
+    setExpandedCell(null);
     try {
       await logHabit.mutateAsync({
         habitId: habit.id,
@@ -122,98 +125,145 @@ export default function HabitGrid({
 
         {habits.map((habit, idx) => {
           const log = getLog(habit.id, date);
-          const key = `${habit.id}-${formatDateKey(date)}`;
-          const isPending = pendingLog === key;
+          const cellKey = `${habit.id}-${formatDateKey(date)}`;
+          const isPending = pendingLog === cellKey;
           const isDone = log?.done === true;
           const isNotDone = log !== undefined && log.done === false;
+          const isExpanded = expandedCell === cellKey;
+          const savedTime = log?.timeNote || "";
+
           return (
             <div
               key={habit.id}
               data-ocid={`habits.item.${idx + 1}`}
-              className="habit-card flex items-center gap-3 p-4 rounded-2xl bg-white transition-all"
+              className="habit-card rounded-2xl bg-white transition-all"
               style={{
                 borderLeft: `4px solid ${habit.color}`,
                 boxShadow: `0 2px 16px 0 ${hexToRgba(habit.color, 0.18)}, 0 1px 4px 0 rgba(0,0,0,0.05)`,
               }}
             >
-              <span
-                className="w-3 h-3 rounded-full shrink-0"
-                style={{ backgroundColor: habit.color }}
-              />
-              <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold shrink-0"
-                style={{
-                  backgroundColor: hexToRgba(habit.color, 0.25),
-                  color: "#3d3560",
-                }}
-              >
-                {habit.name}
-              </span>
-              <input
-                type="text"
-                placeholder="Time note (e.g. e.g. 7:00 AM)"
-                value={timeNotes[key] ?? log?.timeNote ?? ""}
-                onChange={(e) =>
-                  setTimeNotes((prev) => ({ ...prev, [key]: e.target.value }))
-                }
-                data-ocid={`habits.input.${idx + 1}`}
-                className="text-sm border border-border rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring bg-secondary flex-1 min-w-0 max-w-[180px]"
-              />
-              {/* DONE ✓ */}
-              <button
-                type="button"
-                data-ocid={`habits.checkbox.${idx + 1}`}
-                onClick={() => setLog(habit, date, true)}
-                disabled={isPending}
-                title="Done ✓"
-                className="w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all shrink-0 hover:scale-110"
-                style={{
-                  backgroundColor: isDone ? "#22c55e" : "transparent",
-                  borderColor: isDone ? "#22c55e" : "#d1d5db",
-                }}
-              >
-                <Check
-                  className="w-4 h-4"
-                  style={{ color: isDone ? "white" : "#9ca3af" }}
+              <div className="flex items-center gap-3 p-4">
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: habit.color }}
                 />
-              </button>
-              {/* NOT DONE ✗ */}
-              <button
-                type="button"
-                data-ocid={`habits.toggle.${idx + 1}`}
-                onClick={() => setLog(habit, date, false)}
-                disabled={isPending}
-                title="Not done ✗"
-                className="w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all shrink-0 hover:scale-110"
-                style={{
-                  backgroundColor: isNotDone ? "#ef4444" : "transparent",
-                  borderColor: isNotDone ? "#ef4444" : "#d1d5db",
-                }}
-              >
-                <X
-                  className="w-4 h-4"
-                  style={{ color: isNotDone ? "white" : "#9ca3af" }}
+                <span
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold shrink-0"
+                  style={{
+                    backgroundColor: hexToRgba(habit.color, 0.25),
+                    color: "#3d3560",
+                  }}
+                >
+                  {habit.name}
+                </span>
+
+                {/* Time input */}
+                <input
+                  type="text"
+                  placeholder="Time (e.g. 7:00 AM)"
+                  value={timeNotes[cellKey] ?? log?.timeNote ?? ""}
+                  onChange={(e) =>
+                    setTimeNotes((prev) => ({
+                      ...prev,
+                      [cellKey]: e.target.value,
+                    }))
+                  }
+                  data-ocid={`habits.input.${idx + 1}`}
+                  className="text-sm border border-border rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring bg-secondary flex-1 min-w-0 max-w-[160px]"
                 />
-              </button>
-              {onEditHabit && (
+
+                {/* Status button - collapsed or expanded */}
+                <div className="relative shrink-0">
+                  {isDone || isNotDone ? (
+                    // Already logged - show status button, click to change
+                    <button
+                      type="button"
+                      data-ocid={`habits.checkbox.${idx + 1}`}
+                      onClick={() =>
+                        setExpandedCell(isExpanded ? null : cellKey)
+                      }
+                      disabled={isPending}
+                      title="Click to change"
+                      className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white transition-all hover:opacity-80 hover:scale-105"
+                      style={{
+                        backgroundColor: isDone ? "#22c55e" : "#ef4444",
+                      }}
+                    >
+                      {isDone ? (
+                        <Check className="w-5 h-5" />
+                      ) : (
+                        <X className="w-5 h-5" />
+                      )}
+                    </button>
+                  ) : (
+                    // Not logged yet - show plain box
+                    <button
+                      type="button"
+                      data-ocid={`habits.checkbox.${idx + 1}`}
+                      onClick={() =>
+                        setExpandedCell(isExpanded ? null : cellKey)
+                      }
+                      disabled={isPending}
+                      title="Mark habit"
+                      className="w-10 h-10 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:bg-gray-50 transition-all"
+                    >
+                      <span className="text-xs font-medium">?</span>
+                    </button>
+                  )}
+
+                  {/* Expanded options */}
+                  {isExpanded && (
+                    <div className="absolute right-0 top-12 z-20 flex gap-2 bg-white rounded-2xl shadow-xl border border-border p-2">
+                      <button
+                        type="button"
+                        onClick={() => setLog(habit, date, true)}
+                        disabled={isPending}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-50 hover:bg-green-100 text-green-700 font-semibold text-sm transition-all"
+                      >
+                        <Check className="w-4 h-4" /> Done
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLog(habit, date, false)}
+                        disabled={isPending}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm transition-all"
+                      >
+                        <X className="w-4 h-4" /> Not Done
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {onEditHabit && (
+                  <button
+                    type="button"
+                    data-ocid={`habits.edit_button.${idx + 1}`}
+                    onClick={() => onEditHabit(habit)}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded shrink-0"
+                    title="Edit habit"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   type="button"
-                  data-ocid={`habits.edit_button.${idx + 1}`}
-                  onClick={() => onEditHabit(habit)}
-                  className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded shrink-0"
-                  title="Edit habit"
+                  data-ocid={`habits.delete_button.${idx + 1}`}
+                  onClick={() => handleRemove(habit.id)}
+                  className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded shrink-0"
                 >
-                  <Pencil className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
+              </div>
+
+              {/* Time display below if saved */}
+              {savedTime && (
+                <div
+                  className="px-4 pb-3 text-xs font-semibold"
+                  style={{ color: habit.color }}
+                >
+                  🕐 {savedTime}
+                </div>
               )}
-              <button
-                type="button"
-                data-ocid={`habits.delete_button.${idx + 1}`}
-                onClick={() => handleRemove(habit.id)}
-                className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded shrink-0"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
             </div>
           );
         })}
@@ -225,7 +275,6 @@ export default function HabitGrid({
   const colDates = dates;
   const isMonth = viewMode === "month";
 
-  // Today's missed count (for the summary banner)
   const todayMissed = habits.filter((h) => {
     const log = getLog(h.id, today);
     return log !== undefined && log.done === false;
@@ -237,7 +286,6 @@ export default function HabitGrid({
 
   return (
     <div data-ocid="habits.table">
-      {/* Today's summary banner (week/month) */}
       {todayInRange && (
         <div className="flex flex-wrap gap-2 mb-4">
           <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-green-100 text-green-700">
@@ -332,54 +380,106 @@ export default function HabitGrid({
                     const isToday = isSameDay(d, today);
                     const isDone = log?.done === true;
                     const isNotDone = log !== undefined && log.done === false;
+                    const isExpanded = expandedCell === cellKey;
+                    const savedTime = log?.timeNote || "";
 
                     return (
-                      <td key={formatDateKey(d)} className="p-0.5 text-center">
+                      <td
+                        key={formatDateKey(d)}
+                        className="p-0.5 text-center align-top"
+                      >
                         <div
-                          className={`flex gap-0.5 justify-center items-center ${
+                          className={`flex flex-col items-center justify-center gap-0.5 ${
                             isToday ? "bg-purple-50 rounded-lg py-0.5" : ""
                           }`}
                         >
-                          {/* Done ✓ button */}
-                          <button
-                            type="button"
-                            data-ocid={`habits.checkbox.${idx + 1}`}
-                            onClick={() => setLog(habit, d, true)}
-                            disabled={isPending}
-                            title="Done ✓"
-                            className="w-6 h-6 rounded-md flex items-center justify-center border transition-all hover:scale-110"
-                            style={{
-                              backgroundColor: isDone
-                                ? "#22c55e"
-                                : "transparent",
-                              borderColor: isDone ? "#22c55e" : "#d1d5db",
-                            }}
-                          >
-                            <Check
-                              className="w-3 h-3"
-                              style={{ color: isDone ? "white" : "#d1d5db" }}
-                            />
-                          </button>
-                          {/* Not done ✗ button */}
-                          <button
-                            type="button"
-                            data-ocid={`habits.toggle.${idx + 1}`}
-                            onClick={() => setLog(habit, d, false)}
-                            disabled={isPending}
-                            title="Not done ✗"
-                            className="w-6 h-6 rounded-md flex items-center justify-center border transition-all hover:scale-110"
-                            style={{
-                              backgroundColor: isNotDone
-                                ? "#ef4444"
-                                : "transparent",
-                              borderColor: isNotDone ? "#ef4444" : "#d1d5db",
-                            }}
-                          >
-                            <X
-                              className="w-3 h-3"
-                              style={{ color: isNotDone ? "white" : "#d1d5db" }}
-                            />
-                          </button>
+                          <div className="relative">
+                            {isDone || isNotDone ? (
+                              <button
+                                type="button"
+                                data-ocid={`habits.checkbox.${idx + 1}`}
+                                onClick={() =>
+                                  setExpandedCell(isExpanded ? null : cellKey)
+                                }
+                                disabled={isPending}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-white transition-all hover:opacity-80"
+                                style={{
+                                  backgroundColor: isDone
+                                    ? "#22c55e"
+                                    : "#ef4444",
+                                }}
+                              >
+                                {isDone ? (
+                                  <Check className="w-3.5 h-3.5" />
+                                ) : (
+                                  <X className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                data-ocid={`habits.checkbox.${idx + 1}`}
+                                onClick={() =>
+                                  setExpandedCell(isExpanded ? null : cellKey)
+                                }
+                                disabled={isPending}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all"
+                              >
+                                <span className="text-gray-300 text-xs">·</span>
+                              </button>
+                            )}
+
+                            {isExpanded && (
+                              <div
+                                className="absolute top-8 left-1/2 -translate-x-1/2 z-20 flex flex-col gap-2 bg-white rounded-xl shadow-xl border border-border p-2"
+                                style={{ minWidth: "140px" }}
+                              >
+                                <input
+                                  type="text"
+                                  placeholder="Time (e.g. 7:00 AM)"
+                                  value={
+                                    timeNotes[cellKey] ?? log?.timeNote ?? ""
+                                  }
+                                  onChange={(e) =>
+                                    setTimeNotes((prev) => ({
+                                      ...prev,
+                                      [cellKey]: e.target.value,
+                                    }))
+                                  }
+                                  className="text-xs border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-ring bg-secondary w-full"
+                                />
+                                <div className="flex gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setLog(habit, d, true)}
+                                    disabled={isPending}
+                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-green-100 hover:bg-green-200 text-green-700 transition-all"
+                                    title="Done"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setLog(habit, d, false)}
+                                    disabled={isPending}
+                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-all"
+                                    title="Not Done"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {/* Show time below the status button */}
+                          {savedTime && (
+                            <span
+                              className="text-[9px] font-semibold leading-tight"
+                              style={{ color: habit.color }}
+                            >
+                              {savedTime}
+                            </span>
+                          )}
                         </div>
                       </td>
                     );

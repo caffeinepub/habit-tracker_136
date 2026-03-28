@@ -87,13 +87,18 @@ export default function Dashboard({ userProfile }: DashboardProps) {
     return { dates, startDate, endDate, rangeLabel };
   }, [viewMode, anchor]);
 
-  const { data: habits = [], isLoading: habitsLoading } = useGetHabits(true);
-  const { data: logs = [], isLoading: logsLoading } = useGetLogs(
-    startDate,
-    endDate,
-    true,
-  );
+  const {
+    data: habits = [],
+    isLoading: habitsLoading,
+    isError: habitsError,
+  } = useGetHabits(true);
+  const {
+    data: logs = [],
+    isLoading: logsLoading,
+    isError: logsError,
+  } = useGetLogs(startDate, endDate, true);
   const isLoading = habitsLoading || logsLoading;
+  const isError = habitsError || logsError;
 
   const habitColors = habits.map((h) => ({ name: h.name, color: h.color }));
 
@@ -523,6 +528,19 @@ export default function Dashboard({ userProfile }: DashboardProps) {
                   className="flex items-center justify-center py-20"
                 >
                   <div className="w-10 h-10 rounded-full border-4 border-accent border-t-foreground animate-spin" />
+                </div>
+              ) : isError ? (
+                <div
+                  data-ocid="dashboard.error_state"
+                  className="flex flex-col items-center justify-center py-20 text-center"
+                >
+                  <div className="text-4xl mb-3">⚠️</div>
+                  <p className="text-sm font-semibold text-foreground mb-1">
+                    Could not load habits
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Please refresh the page and try again.
+                  </p>
                 </div>
               ) : (
                 <HabitGrid

@@ -1,4 +1,4 @@
-import { Activity, Calendar, Check } from "lucide-react";
+import { Activity, Calendar, Check, X } from "lucide-react";
 import { motion } from "motion/react";
 import type { Habit, HabitLog } from "../backend.d";
 import DonutChart from "../components/DonutChart";
@@ -31,84 +31,136 @@ function SharedHabitGrid({
   const getLog = (habitId: string, date: Date) =>
     logs.find((l) => l.habitId === habitId && l.date === formatDateKey(date));
 
+  // Summary counts for today
+  const todayDone = habits.filter(
+    (h) => getLog(h.id, today)?.done === true,
+  ).length;
+  const todayMissed = habits.filter((h) => {
+    const log = getLog(h.id, today);
+    return log !== undefined && log.done === false;
+  }).length;
+  const todayRemaining = habits.filter(
+    (h) => getLog(h.id, today) === undefined,
+  ).length;
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse" style={{ minWidth: "900px" }}>
-        <thead>
-          <tr>
-            <th className="text-left p-3 text-sm font-semibold text-muted-foreground w-40 sticky left-0 bg-white z-10">
-              Habit
-            </th>
-            {monthDates.map((d) => {
-              const isToday = isSameDay(d, today);
+    <div>
+      {/* Today's summary */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-green-100 text-green-700">
+          <Check className="w-3 h-3" /> {todayDone} Done today
+        </span>
+        {todayMissed > 0 && (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-red-100 text-red-600">
+            <X className="w-3 h-3" /> {todayMissed} Missed today
+          </span>
+        )}
+        {todayRemaining > 0 && (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-500">
+            ⏳ {todayRemaining} Remaining
+          </span>
+        )}
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse" style={{ minWidth: "900px" }}>
+          <thead>
+            <tr>
+              <th className="text-left p-3 text-sm font-semibold text-muted-foreground w-40 sticky left-0 bg-white z-10">
+                Habit
+              </th>
+              {monthDates.map((d) => {
+                const isToday = isSameDay(d, today);
+                return (
+                  <th
+                    key={formatDateKey(d)}
+                    className={`text-center p-1 text-xs font-semibold ${
+                      isToday ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span>{shortDay(d)}</span>
+                      <span
+                        className={`text-sm w-6 h-6 flex items-center justify-center rounded-full ${
+                          isToday
+                            ? "bg-foreground text-primary-foreground font-bold"
+                            : ""
+                        }`}
+                      >
+                        {d.getDate()}
+                      </span>
+                    </div>
+                  </th>
+                );
+              })}
+              <th className="text-center p-2 text-xs text-muted-foreground">
+                Done
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {habits.map((habit) => {
+              const doneDays = monthDates.filter(
+                (d) => getLog(habit.id, d)?.done,
+              ).length;
               return (
-                <th
-                  key={formatDateKey(d)}
-                  className={`text-center p-1 text-xs font-semibold ${
-                    isToday ? "text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span>{shortDay(d)}</span>
+                <tr key={habit.id} className="border-t border-border/50">
+                  <td className="p-3 sticky left-0 bg-white z-10">
                     <span
-                      className={`text-sm w-6 h-6 flex items-center justify-center rounded-full ${
-                        isToday
-                          ? "bg-foreground text-primary-foreground font-bold"
-                          : ""
-                      }`}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                      style={{
+                        backgroundColor: hexToRgba(habit.color, 0.3),
+                        color: "#3d3560",
+                      }}
                     >
-                      {d.getDate()}
+                      {habit.name}
                     </span>
-                  </div>
-                </th>
+                  </td>
+                  {monthDates.map((d) => {
+                    const log = getLog(habit.id, d);
+                    const isDone = log?.done === true;
+                    const isNotDone = log !== undefined && log.done === false;
+                    const savedTime = log?.timeNote || "";
+                    return (
+                      <td
+                        key={formatDateKey(d)}
+                        className="p-0.5 text-center align-top"
+                      >
+                        <div className="flex flex-col items-center gap-0.5">
+                          <div
+                            className="w-6 h-6 rounded-md flex items-center justify-center mx-auto"
+                            style={{
+                              backgroundColor: isDone
+                                ? "#22c55e"
+                                : isNotDone
+                                  ? "#ef4444"
+                                  : "#f5f3fc",
+                            }}
+                          >
+                            {isDone && <Check className="w-3 h-3 text-white" />}
+                            {isNotDone && <X className="w-3 h-3 text-white" />}
+                          </div>
+                          {savedTime && (
+                            <span
+                              className="text-[8px] font-semibold leading-tight"
+                              style={{ color: habit.color }}
+                            >
+                              {savedTime}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="p-2 text-center text-xs font-semibold text-muted-foreground">
+                    {doneDays}/{monthDates.length}
+                  </td>
+                </tr>
               );
             })}
-            <th className="text-center p-2 text-xs text-muted-foreground">
-              Done
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {habits.map((habit) => {
-            const doneDays = monthDates.filter(
-              (d) => getLog(habit.id, d)?.done,
-            ).length;
-            return (
-              <tr key={habit.id} className="border-t border-border/50">
-                <td className="p-3 sticky left-0 bg-white z-10">
-                  <span
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-                    style={{
-                      backgroundColor: hexToRgba(habit.color, 0.3),
-                      color: "#3d3560",
-                    }}
-                  >
-                    {habit.name}
-                  </span>
-                </td>
-                {monthDates.map((d) => {
-                  const log = getLog(habit.id, d);
-                  return (
-                    <td key={formatDateKey(d)} className="p-1 text-center">
-                      <div
-                        className="w-6 h-6 rounded-md flex items-center justify-center mx-auto"
-                        style={{
-                          backgroundColor: log?.done ? habit.color : "#f5f3fc",
-                        }}
-                      >
-                        {log?.done && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                    </td>
-                  );
-                })}
-                <td className="p-2 text-center text-xs font-semibold text-muted-foreground">
-                  {doneDays}/{monthDates.length}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

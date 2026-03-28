@@ -43,6 +43,7 @@ export function useGetHabits(enabled: boolean) {
       return actor.getHabits();
     },
     enabled: enabled && !!actor && !actorFetching,
+    retry: false,
   });
 }
 
@@ -88,6 +89,7 @@ export function useGetLogs(
       return actor.getLogs(startDate, endDate);
     },
     enabled: enabled && !!actor && !actorFetching && !!startDate && !!endDate,
+    retry: false,
   });
 }
 
